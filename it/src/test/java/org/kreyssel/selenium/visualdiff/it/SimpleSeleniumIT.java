@@ -1,13 +1,11 @@
 package org.kreyssel.selenium.visualdiff.it;
 
-import org.apache.commons.lang3.SystemUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.kreyssel.selenium.visualdiff.core.junit4.TakesScreenshotRule;
 import org.openqa.selenium.firefox.FirefoxDriver;
-import org.openqa.selenium.ie.InternetExplorerDriver;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
 /**
@@ -52,9 +50,6 @@ public class SimpleSeleniumIT {
 	}
 
 	private RemoteWebDriver createDriver() {
-		if (SystemUtils.IS_OS_WINDOWS)
-			return new InternetExplorerDriver();
-
 		return new FirefoxDriver();
 	}
 }

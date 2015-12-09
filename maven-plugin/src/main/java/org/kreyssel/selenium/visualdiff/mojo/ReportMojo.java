@@ -1,10 +1,6 @@
 package org.kreyssel.selenium.visualdiff.mojo;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
-
+import com.google.common.collect.ImmutableListMultimap;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
@@ -14,6 +10,7 @@ import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.doxia.sink.Sink;
 import org.apache.maven.doxia.siterenderer.Renderer;
 import org.apache.maven.project.MavenProject;
@@ -29,7 +26,10 @@ import org.kreyssel.selenium.visualdiff.mojo.report.VisualDiffReportRenderer;
 import org.kreyssel.selenium.visualdiff.mojo.report.VisualDiffReportUtil;
 import org.kreyssel.selenium.visualdiff.mojo.report.VisualDiffTestReportRenderer;
 
-import com.google.common.collect.ImmutableListMultimap;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * ReportMojo generates a report of visual diffs between two selenium2
@@ -40,6 +40,7 @@ import com.google.common.collect.ImmutableListMultimap;
  */
 public class ReportMojo extends AbstractMavenReport {
 
+	private static final ArtifactVersion VERSION_0 = new DefaultArtifactVersion("0.0.0");
 	/**
 	 * Directory where reports will go.
 	 * 
@@ -142,12 +143,12 @@ public class ReportMojo extends AbstractMavenReport {
 
 		if (currentArtifact == null) {
 			throw new MavenReportException(
-					"Could not found screenshot archive! Did you ensure that you run the package goal before?");
+					"Could not find screenshot archive! Did you ensure that you run the package goal before?");
 		}
 
 		Artifact previousArtifact;
 		try {
-			previousArtifact = getScreenshotsFromLatestRelease(artifact);
+			previousArtifact = getScreenshotsFromPreviousRelease(artifact);
 		} catch (Exception ex) {
 			throw new MavenReportException(
 					"Error on resolve screenshot artifact for latest project!", ex);
@@ -155,7 +156,7 @@ public class ReportMojo extends AbstractMavenReport {
 
 		if (previousArtifact == null || previousArtifact.getFile() == null) {
 			getLog().warn(
-					"Could not found a previous release version of artifact '"
+					"Could not find a previous release version of artifact '"
 							+ project.getArtifact() + "'!");
 			return;
 		}
@@ -197,7 +198,7 @@ public class ReportMojo extends AbstractMavenReport {
 		}
 	}
 
-	protected Artifact getScreenshotsFromLatestRelease(final Artifact artifact)
+	protected Artifact getScreenshotsFromPreviousRelease(final Artifact artifact)
 			throws ArtifactMetadataRetrievalException, ArtifactResolutionException,
 			ArtifactNotFoundException {
 
@@ -206,13 +207,15 @@ public class ReportMojo extends AbstractMavenReport {
 				artifactMetadataSource.retrieveAvailableVersions(artifact, localRepository,
 						remoteArtifactRepositories),
 				VersionComparators.getVersionComparator("maven"));
-		ArtifactVersion newestArtifactVersion = artifactVersions.getNewestVersion(null, null);
 
-		if (newestArtifactVersion == null) {
+		ArtifactVersion upperBound = artifact.getSelectedVersion();
+		ArtifactVersion previousArtifactVersion = artifactVersions.getNewestVersion(VERSION_0, upperBound, true, true, false);
+
+		if (previousArtifactVersion == null) {
 			return null;
 		}
 
-		return resolveScreenshotArtifact(artifact, newestArtifactVersion.toString());
+		return resolveScreenshotArtifact(artifact, previousArtifactVersion.toString());
 	}
 
 	protected Artifact resolveScreenshotArtifact(final Artifact artifact, final String version)
